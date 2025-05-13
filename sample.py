@@ -13,7 +13,7 @@ client = session.client(service_name='bedrock-runtime')
 
 def hr_index():
     
-    data_load=PyPDFLoader('https://www.insurance.ca.gov/01-consumers/105-type/95-guides/07-life/upload/LifeInsuranceAndAnnuities-2.pdf')  
+    data_load=PyPDFLoader('LifeInsuranceAndAnnuities-2.pdf')  
     
     data_split=RecursiveCharacterTextSplitter(separators=["\n\n", "\n", " ", ""], chunk_size=100,chunk_overlap=10)
     

@@ -1,4 +1,4 @@
-#1. Import OS, Document Loader, Text Splitter, Bedrock Embeddings, Vector DB, VectorStoreIndex, Bedrock-LLM
+
 import os
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -6,48 +6,58 @@ from langchain_aws import BedrockEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.indexes import VectorstoreIndexCreator
 from langchain_aws import BedrockLLM
-
-#5c. Wrap within a function
+ 
 def hr_index():
-    #2. Define the data source and load data with PDFLoader(https://www.upl-ltd.com/images/people/downloads/Leave-Policy-India.pdf)
-    data_load=PyPDFLoader("chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://www.insurance.ca.gov/01-consumers/105-type/95-guides/07-life/upload/LifeInsuranceAndAnnuities-2.pdf")
     
-    #3. Split the Text based on Character, Tokens etc. - Recursively split by character - ["\n\n", "\n", " ", ""]
-    data_split=RecursiveCharacterTextSplitter(separators=["\n\n", "\n", " ", ""], chunk_size=100, chunk_overlap=10)
-
-    #4. Create Embeddings -- Client connection
-    data_embedding=BedrockEmbeddings(
-        credentials_profile_name='default',
-        model_id= "amazon.titan-embed-text-v1")
-
-    #5à Create Vector DB, Store Embeddings and Index for Search - VectorstoreIndexCreator
+    data_load=PyPDFLoader('https://www.insurance.ca.gov/01-consumers/105-type/95-guides/07-life/upload/LifeInsuranceAndAnnuities-2.pdf')  
+    
+    data_split=RecursiveCharacterTextSplitter(separators=["\n\n", "\n", " ", ""], chunk_size=100,chunk_overlap=10)
+    
+    data_embeddings=BedrockEmbeddings(
+    credentials_profile_name= 'default',
+    model_id='amazon.titan-embed-text-v1')
+    
     data_index=VectorstoreIndexCreator(
-        embedding=data_embedding,
         text_splitter=data_split,
+        embedding=data_embeddings,
         vectorstore_cls=FAISS)
-
-    #5b Create index for HR Report
+    
     db_index=data_index.from_loaders([data_load])
     return db_index
 
-#6a. Write a function to connect to Bedrock Foundation Model
 def hr_llm():
     llm=BedrockLLM(
         credentials_profile_name='default',
-        model_id='anthropic.claude-v2:1',
+        model_id='anthropic.claude-v2',
         model_kwargs={
-            "max_tokens":3000,
-            "temperature":0.1,
-            "top_p":0.9})
+        "max_tokens_to_sample":3000,
+        "temperature": 0.1,
+        "top_p": 0.9})
     return llm
-#6b. Write a function which searches the user prompt, searches the best match from Vector DB and sends both to LLM.
-def hr_response(index, question):
+
+def hr_rag_response(index,question):
     rag_llm=hr_llm()
-    hr_rag_query=index.query(question=question, llm=rag_llm)
+    hr_rag_query=index.query(question=question,llm=rag_llm)
     return hr_rag_query
 
 
+import streamlit as st
+import rag_backend as demo
 
+st.set_page_config(page_title="HR QA and answers using RAG")
+st.markdown("<h1 style='text-align: center;'>HR Q&A with RAG</h1>", unsafe_allow_html=True)
 
+if 'vector_index' not in st.session_state:
+    with st.spinner('Loading documents and building index...'):
+        st.session_state.vector_index = demo.hr_index()
 
-# Index creation --> https://api.python.langchain.com/en/latest/indexes/langchain.indexes.vectorstore.VectorstoreIndexCreator.html
+input_text = st.text_area('Ask your question here:', label_visibility='collapsed')
+go_button = st.button("Submit")
+
+if go_button:
+    if not input_text.strip():
+        st.warning("Please enter a question before submitting.")
+    else:
+        with st.spinner("Thinking..."):
+            response = demo.hr_rag_response(index=st.session_state.vector_index, question=input_text)
+            st.write(response)

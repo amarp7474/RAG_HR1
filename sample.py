@@ -6,7 +6,11 @@ from langchain_aws import BedrockEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.indexes import VectorstoreIndexCreator
 from langchain_aws import BedrockLLM
- 
+import boto3
+
+session = boto3.Session(profile_name='default', region_name='us-east-1')
+client = session.client(service_name='bedrock-runtime')
+
 def hr_index():
     
     data_load=PyPDFLoader('https://www.insurance.ca.gov/01-consumers/105-type/95-guides/07-life/upload/LifeInsuranceAndAnnuities-2.pdf')  
@@ -15,6 +19,7 @@ def hr_index():
     
     data_embeddings=BedrockEmbeddings(
     credentials_profile_name= 'default',
+    region_name='us-east-1',
     model_id='amazon.titan-embed-text-v1')
     
     data_index=VectorstoreIndexCreator(

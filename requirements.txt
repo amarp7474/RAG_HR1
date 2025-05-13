@@ -1,6 +1,6 @@
 streamlit
-pyngrok
+langchain
+langchain-community
 PyPDF2
 openai
-langchain
 faiss-cpu
